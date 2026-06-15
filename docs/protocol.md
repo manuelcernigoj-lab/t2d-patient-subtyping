@@ -46,6 +46,20 @@ variable (standard approach for cross-sectional analyses on EHR data).
 the generated CSVs, the actual availability of each variable will be verified and the list will
 be updated accordingly (documented deviation if needed).
 
+### Deviation log
+
+- **LDL cholesterol**: the originally planned LOINC code `2089-1` ("LDL calculated") returned
+  zero observations for the cohort. Investigation by `DESCRIPTION` search identified
+  `18262-6` ("Cholesterol in LDL, direct assay") as the code actually used by Synthea. The
+  candidate variable list has been updated accordingly: `2089-1` → `18262-6`.
+- **Total cholesterol**: LOINC `2093-3` ("Cholesterol [Mass/volume] in Serum or Plasma") was
+  found during the same investigation and added as an additional candidate variable, since it
+  is clinically informative and was not part of the original wishlist.
+
+Final laboratory variable set: HbA1c (`4548-4`), Glucose (`2339-0`), BMI (`39156-5`), LDL
+(`18262-6`), HDL (`2085-9`), Total Cholesterol (`2093-3`), Triglycerides (`2571-8`), Creatinine
+(`2160-0`).
+
 ---
 
 ## 3. Feature Engineering: Charlson Comorbidity Index (CCI)
