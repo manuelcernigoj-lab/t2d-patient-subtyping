@@ -13,3 +13,6 @@ __pycache__/
 
 # Intermediate outputs
 output/
+
+# Synthea executable (download separately, see docs/project_brief.md)
+*.jar
