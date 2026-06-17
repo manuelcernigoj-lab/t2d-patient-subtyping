@@ -1,6 +1,6 @@
 # Analysis Protocol — Patient Subtyping in a Type 2 Diabetes Cohort (Synthea)
 
-## Status: Phase 2 complete (ETL and feature engineering) — ready for Phase 3 (clustering)
+## Status: Phase 3 complete (clustering) — ready for Phase 4 (interpretation / reporting)
 
 ---
 
@@ -202,11 +202,126 @@ all variables from the original study (e.g., autoantibodies, HOMA-B/HOMA-IR).
 
 ---
 
-## 7. Next Steps (Phase 3)
+## 7. Phase 3 — Clustering: Methodology and Results
 
-1. Exploratory data analysis on the full `patient_features` table (distributions, correlations)
-2. Address the right-skewed `encounters_per_year` variable (Section 4) before scaling
-3. Feature scaling and encoding of categorical variables
-4. Determine the number of clusters (elbow method, silhouette score) — no fixed K a priori
-5. Run and compare at least two clustering algorithms (e.g., K-means, agglomerative)
-6. Dimensionality reduction for visualization (PCA and/or UMAP)
+### 7.1 Exploratory Data Analysis
+
+Distribution and correlation analysis on the full `patient_features` table surfaced
+several findings ahead of feature engineering: `HbA1c` and `Glucose` show multimodal
+distributions, hinting at distinct glycemic-control subgroups even at the univariate
+level; `BMI` is bimodal (flagged as a possible Synthea generation artifact rather than
+a confirmed clinical pattern); `Triglycerides` is heavily right-skewed; `Creatinine`'s
+distribution visibly shows the Phase 2 imputation strategy as a spike near the
+reference value, distinct from the measured-value distribution. The correlation
+matrix revealed LDL/Total Cholesterol multicollinearity (r=0.90) and a notable
+negative correlation between HbA1c and CCI/encounters_per_year/Creatinine (-0.46 to
+-0.54) — an early signal that H3 and H4 (Section 5) might be distinct rather than
+overlapping phenotypes.
+
+### 7.2 Feature Engineering Finalization
+
+- **Total Cholesterol dropped**: r=0.90 with LDL; LDL retained as the more standard
+  lipid marker in T2D literature.
+- **`encounters_per_year` log1p-transformed** to address right-skew ahead of
+  Euclidean-distance-based clustering.
+- **Categorical encoding**: `GENDER` binary-mapped; `RACE` and `ETHNICITY` one-hot
+  encoded with `drop_first=False` — a deliberate deviation from the regression
+  convention of dropping a reference category, since for distance-based clustering,
+  dropping a category breaks the equidistance between categories that one-hot
+  encoding is meant to provide.
+
+### 7.3 Feature Scaling
+
+`RobustScaler` (median/IQR) applied to the 10 continuous features only; the 13
+binary/one-hot columns left unscaled (already on a native 0-1 scale). RobustScaler
+chosen over `StandardScaler` for resilience to residual outliers in `Triglycerides`
+and `Creatinine`. Final clustering input matrix `X_scaled`, shape (1763, 23).
+
+### 7.4 K Selection — Round 1 (full feature set) and Diagnosis
+
+Elbow method (full 23-feature set) suggested K=4-5; silhouette score favored K=2
+(~0.44) almost exclusively, with all K≥3 falling below the 0.25 "weak structure"
+threshold (Kaufman & Rousseeuw scale).
+
+**Diagnostic 1 — K=2 profiling**: revealed near-identical values across clusters for
+`AGE`, `HbA1c`, `CCI`, `Creatinine`, `encounters_per_year`, but a sharp split on
+`on_metformin` (47.7% vs 98.0%) and highly imbalanced cluster sizes (1664 vs 99). This
+indicated the K=2 split was driven by medication assignment, not disease severity.
+
+**Diagnostic 2 — dendrogram (ward linkage, full feature set)**: showed 4
+default-colored branches (scipy's 0.7×max-height auto-threshold, not a statistically
+chosen K), but a weak relative merge-height gap between the two largest branches
+(~669 and ~724 patients), suggesting a natural cut closer to K=3.
+
+**Root cause**: with 13 of 23 features being unscaled binary/one-hot columns
+(medication flags, `RACE`, `ETHNICITY`), the categorical block was disproportionately
+influencing Euclidean distance relative to the 10 RobustScaler-scaled continuous
+clinical features.
+
+**Decision (deviation from initial plan)**: medication and demographic categorical
+features excluded from the clustering *input* (kept in `patient_features` for
+post-hoc profiling and equity checks). Clustering re-run on `X_clinical`, the 10
+continuous clinical features only.
+
+### 7.5 K Selection — Round 2 (clinical features only) and Final Choice
+
+Silhouette improved across all K (K=2: 0.44→0.475; K=3: 0.21→0.265; K=4: 0.16→0.19).
+**K=3 crossed the 0.25 "reasonable structure" threshold for the first time**; K=4
+remained below it. The dendrogram on `X_clinical` showed exactly 3 default-colored
+branches (no residual 4th split), with consistent relative gaps (~19-38) across all
+three — a markedly cleaner structure than the full-feature dendrogram.
+
+**Robustness check**: KMeans vs. Agglomerative (ward) agreement, measured via
+Adjusted Rand Index — K=3: ARI=0.703 (strong agreement); K=4: ARI=0.327 (weak/
+divergent, the two algorithms disagree on where to cut). PCA visualization (48.7%
+variance explained by PC1+PC2) corroborated this: the small distinct subgroup is
+visually identical across K=3 and K=4, while K=4 arbitrarily bisects the large dense
+cluster with no visible density gap.
+
+**Decision: K=3 adopted as the final model.** Four independent diagnostics (elbow,
+silhouette, dendrogram gap structure, ARI) converge on this choice.
+
+### 7.6 Cluster Profiling Against H1-H4
+
+| Cluster | n (%) | Profile | Hypothesis match |
+|---|---|---|---|
+| 0 | 1303 (73.9%) | HbA1c 6.09, CCI 1.77 (lowest), encounters 1.34 (lowest), metformin 48% | Partial **H2** (largest subtype, as expected; age criterion not met) |
+| 1 | 94 (5.3%) | BMI 31.0, Triglycerides 375.9, HDL 29.9 (lowest), metformin 98% | Partial **H1** (dyslipidemic/insulin-resistant profile; age criterion not met) |
+| 2 | 366 (20.8%) | Age 72.7 (oldest), CCI 4.34, encounters 6.35, insulin 91% | Strong **H3** (multi-morbid) |
+
+**H4 ("poor glycemic control despite intensive therapy") not confirmed.** The data
+show the inverse pattern: Cluster 2 (most intensively treated, 91% on insulin) has
+the lowest HbA1c (3.76); Cluster 0 (least intensively treated, 23% on insulin) has
+the highest HbA1c (6.09). **Reinterpretation (documented deviation)**: this more
+plausibly reflects *undertreatment* of poorly controlled patients, not treatment-
+resistant poor control.
+
+**K=4 evaluated and not adopted**: reproduces Clusters 1 and 2 unchanged; splits
+Cluster 0 into two halves differing mainly in metformin use (89% vs 21%) and LDL,
+with no difference in age, CCI, or encounters — a treatment/lipid-control gradient
+within the same population, not a new severity axis. Flagged as a possible direction
+for future work (e.g., a continuous treatment-adherence score) rather than grounds
+for a fourth cluster.
+
+### 7.7 Demographic Equity Check (Post-Hoc)
+
+`RACE`, `ETHNICITY`, and `GENDER` — excluded from clustering inputs in Section 7.4 —
+were checked post-hoc for disproportionate distribution across the K=3 clusters. No
+significant association found: RACE (chi2=8.18, p=0.611), ETHNICITY (chi2=2.45,
+p=0.294), GENDER (chi2=2.10, p=0.350). Given the cohort size (~1800), this null
+result is statistically informative (high test power), though `RACE_hawaiian` and
+`RACE_native` (~1% of the cohort each) likely fall below the conventional expected-
+cell-count threshold for chi-square reliability — the rarest-category finding should
+be read with appropriate caution.
+
+### 7.8 Deviation Log (Phase 3 Summary)
+
+- Total Cholesterol dropped post-hoc (multicollinearity with LDL).
+- One-hot encoding used `drop_first=False`, a clustering-specific deviation from the
+  regression convention.
+- Medication and demographic categorical features excluded from the clustering
+  distance metric after diagnostic evidence of disproportionate influence — a
+  mid-phase deviation from the original intent of including the full candidate
+  feature set (Section 2).
+- H4 reinterpreted as an undertreatment pattern rather than treatment-resistant poor
+  control, based on cluster-level evidence.
