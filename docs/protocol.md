@@ -325,3 +325,21 @@ be read with appropriate caution.
   feature set (Section 2).
 - H4 reinterpreted as an undertreatment pattern rather than treatment-resistant poor
   control, based on cluster-level evidence.
+
+  ## Appendix — Supplementary exploration: metformin gradient and dataset limitations
+
+A supplementary post-hoc exploration (notebook 03) investigated whether the
+metformin-associated metabolic gradient observed within Cluster 0 ("Mild, lower
+treatment intensity") represented a discrete sub-phenotype. Recursive clustering
+(silhouette, K=2-7), Mann-Whitney effect sizes, and visual inspection converged on
+classifying it as a real but continuous gradient, not a discrete sub-cluster — the
+finalized K=3 solution (Section 7) is unaffected.
+
+**Dataset limitation identified**: HbA1c and BMI show sharp, near-categorical
+density spikes inconsistent with continuous biological measurement, most plausibly
+a Synthea data-generation artifact (discrete clinical-state modules). This banding
+is independent of the metformin gradient and was not investigated further, as the
+generation mechanism itself is out of scope. Readers/reviewers of this project
+should be aware that subtype boundaries derived from HbA1c in this synthetic
+dataset may be influenced by this artifact, and that conclusions drawn from HbA1c
+distributional shape (beyond central tendency) warrant caution.
