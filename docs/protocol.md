@@ -18,7 +18,7 @@ cohort of 1,500-2,000 diabetic patients, assuming a real-world prevalence of ~8-
 
 - **Age**: no minimum age filter is applied at this stage. After the ETL step, the age
   distribution of the diabetic cohort will be reviewed. If a relevant subgroup of early-onset
-  patients emerges (e.g., <30 years), a decision will be made — with documented justification —
+  patients emerges (e.g., <30 years), a decision will be made, with documented justification,
   to either:
   - include them in the main analysis,
   - treat them as a separate subgroup with dedicated commentary,
@@ -28,7 +28,7 @@ cohort of 1,500-2,000 diabetic patients, assuming a real-world prevalence of ~8-
   a deviation from the initial protocol.
 
   **Outcome (Phase 2)**: the age distribution was reviewed (range 19-110, median 63, mean 64.6).
-  Only 7 out of 1,763 patients (0.4%) are below age 30 — too small a subgroup to analyze
+  Only 7 out of 1,763 patients (0.4%) are below age 30, too small a subgroup to analyze
   separately, and the distribution shows no secondary peak suggesting a distinct early-onset
   phenotype. **Decision**: all 1,763 patients are included in the main analysis without any
   age-based filtering or stratification.
@@ -51,7 +51,7 @@ variable (standard approach for cross-sectional analyses on EHR data).
 **Note**: this list is a clinically-reasoned "wishlist". In Phase 1, after initial exploration of
 the generated CSVs, the actual availability of each variable will be verified and the list will
 be updated accordingly (documented deviation if needed). *Medication classes were revised in
-Phase 2 based on actual availability — see Section 4.*
+Phase 2 based on actual availability, see Section 4.*
 
 ### Deviation log
 
@@ -74,7 +74,7 @@ higher than any other laboratory variable (all others: 0% missing). This is inte
 **missing not at random**: creatinine is not part of routine diabetes monitoring and is more
 likely to be ordered when renal impairment is already suspected (e.g., in older patients or
 those with other comorbidities). Imputing with the sample median of the measured subgroup would
-therefore be biased — that subgroup is enriched for patients with a clinical reason to be
+therefore be biased, that subgroup is enriched for patients with a clinical reason to be
 tested.
 
 **Decision**: missingness is encoded explicitly via a binary indicator (`creatinine_measured`),
@@ -83,7 +83,7 @@ themselves are imputed with a fixed clinical reference value (0.9 mg/dL, approxi
 the normal adult range), rather than a sample-derived statistic.
 
 **Quantitative validation**: the median creatinine value among the 840 patients for whom it
-*was* measured is 2.1 mg/dL — well above the normal range upper limit (~1.3 mg/dL) and more than
+*was* measured is 2.1 mg/dL, well above the normal range upper limit (~1.3 mg/dL) and more than
 double the reference value used for imputation. This confirms the selection-bias hypothesis:
 patients who get tested are not representative of the cohort as a whole, supporting the choice
 of a reference value over the sample median.
@@ -150,13 +150,13 @@ sulfonylureas, DPP-4 inhibitors, or thiazolidinediones were found in the generat
 **Decision**: standalone binary features were built only for metformin and insulin. GLP-1
 agonists and SGLT2 inhibitors were grouped into a single `on_other_antidiabetic` feature, since
 individually they are too rare (0.2%-1% of the cohort) to carry discriminative power for
-clustering — a feature that is almost entirely zero contributes no useful variance. This
+clustering, a feature that is almost entirely zero contributes no useful variance. This
 preserves the "on a more recent/specialist therapy" signal without introducing near-constant
 columns. This is a deviation from the original wishlist (Section 2), which listed sulfonylureas
 and SGLT2 inhibitors as separate candidate variables.
 
 Resulting features: `on_metformin`, `on_insulin`, `on_other_antidiabetic`. 516 patients (29% of
-the cohort) are on none of the three — plausibly patients managed by diet/lifestyle alone, or
+the cohort) are on none of the three, plausibly patients managed by diet/lifestyle alone, or
 with borderline glycemic control not yet requiring pharmacological treatment.
 
 ### Healthcare utilization
@@ -166,7 +166,7 @@ Built as `encounters_per_year`: total encounters divided by each patient's obser
 follow-up lengths comparable.
 
 **Distribution note**: the resulting variable is right-skewed (median 1.31, mean 2.42, max
-20.64) — a small subgroup of patients has much higher utilization than the majority, plausibly
+20.64), a small subgroup of patients has much higher utilization than the majority, plausibly
 overlapping with the high-CCI/complication subgroup. Flagged for Phase 3: this skew may warrant
 a log transformation before scaling, since K-means relies on Euclidean distance and extreme
 values could otherwise dominate the clustering result.
@@ -185,7 +185,7 @@ Defined *before* the exploratory analysis, as a reference for cluster interpreta
 - **H3 — "Multi-morbid" cluster**: high CCI, high encounter frequency, possible renal impairment,
   independent of glycemic control.
 - **H4 — "Poor glycemic control" cluster**: elevated HbA1c despite intensive therapy (insulin
-  plus other agents) — a clinically high-priority group due to complication risk.
+  plus other agents), a clinically high-priority group due to complication risk.
 
 **Note**: H3 and H4 may overlap in practice. Clustering will help clarify whether these represent
 distinct groups or a single phenotype with dual characteristics.
@@ -194,7 +194,7 @@ distinct groups or a single phenotype with dual characteristics.
 
 ## 6. Literature Reference for Validation
 
-Ahlqvist et al., 2018, *Lancet Diabetes & Endocrinology* — identification of 5 adult-onset
+Ahlqvist et al., 2018, *Lancet Diabetes & Endocrinology*, identification of 5 adult-onset
 diabetes subgroups (SAID, SIDD, SIRD, MOD, MARD) based on age, BMI, HbA1c, autoantibodies, and
 insulin resistance/secretion indices. To be used as a conceptual reference for cluster
 interpretation, with appropriate caution: the data used here are synthetic and do not include
@@ -215,7 +215,7 @@ distribution visibly shows the Phase 2 imputation strategy as a spike near the
 reference value, distinct from the measured-value distribution. The correlation
 matrix revealed LDL/Total Cholesterol multicollinearity (r=0.90) and a notable
 negative correlation between HbA1c and CCI/encounters_per_year/Creatinine (-0.46 to
--0.54) — an early signal that H3 and H4 (Section 5) might be distinct rather than
+-0.54), an early signal that H3 and H4 (Section 5) might be distinct rather than
 overlapping phenotypes.
 
 ### 7.2 Feature Engineering Finalization
@@ -225,7 +225,7 @@ overlapping phenotypes.
 - **`encounters_per_year` log1p-transformed** to address right-skew ahead of
   Euclidean-distance-based clustering.
 - **Categorical encoding**: `GENDER` binary-mapped; `RACE` and `ETHNICITY` one-hot
-  encoded with `drop_first=False` — a deliberate deviation from the regression
+  encoded with `drop_first=False`, a deliberate deviation from the regression
   convention of dropping a reference category, since for distance-based clustering,
   dropping a category breaks the equidistance between categories that one-hot
   encoding is meant to provide.
@@ -269,7 +269,7 @@ Silhouette improved across all K (K=2: 0.44→0.475; K=3: 0.21→0.265; K=4: 0.1
 **K=3 crossed the 0.25 "reasonable structure" threshold for the first time**; K=4
 remained below it. The dendrogram on `X_clinical` showed exactly 3 default-colored
 branches (no residual 4th split), with consistent relative gaps (~19-38) across all
-three — a markedly cleaner structure than the full-feature dendrogram.
+three, a markedly cleaner structure than the full-feature dendrogram.
 
 **Robustness check**: KMeans vs. Agglomerative (ward) agreement, measured via
 Adjusted Rand Index — K=3: ARI=0.703 (strong agreement); K=4: ARI=0.327 (weak/
@@ -298,20 +298,20 @@ resistant poor control.
 
 **K=4 evaluated and not adopted**: reproduces Clusters 1 and 2 unchanged; splits
 Cluster 0 into two halves differing mainly in metformin use (89% vs 21%) and LDL,
-with no difference in age, CCI, or encounters — a treatment/lipid-control gradient
+with no difference in age, CCI, or encounters, a treatment/lipid-control gradient
 within the same population, not a new severity axis. Flagged as a possible direction
 for future work (e.g., a continuous treatment-adherence score) rather than grounds
 for a fourth cluster.
 
 ### 7.7 Demographic Equity Check (Post-Hoc)
 
-`RACE`, `ETHNICITY`, and `GENDER` — excluded from clustering inputs in Section 7.4 —
+`RACE`, `ETHNICITY`, and `GENDER`, excluded from clustering inputs in Section 7.4,
 were checked post-hoc for disproportionate distribution across the K=3 clusters. No
 significant association found: RACE (chi2=8.18, p=0.611), ETHNICITY (chi2=2.45,
 p=0.294), GENDER (chi2=2.10, p=0.350). Given the cohort size (~1800), this null
 result is statistically informative (high test power), though `RACE_hawaiian` and
 `RACE_native` (~1% of the cohort each) likely fall below the conventional expected-
-cell-count threshold for chi-square reliability — the rarest-category finding should
+cell-count threshold for chi-square reliability, the rarest-category finding should
 be read with appropriate caution.
 
 ### 7.8 Deviation Log (Phase 3 Summary)
@@ -320,7 +320,7 @@ be read with appropriate caution.
 - One-hot encoding used `drop_first=False`, a clustering-specific deviation from the
   regression convention.
 - Medication and demographic categorical features excluded from the clustering
-  distance metric after diagnostic evidence of disproportionate influence — a
+  distance metric after diagnostic evidence of disproportionate influence, a
   mid-phase deviation from the original intent of including the full candidate
   feature set (Section 2).
 - H4 reinterpreted as an undertreatment pattern rather than treatment-resistant poor
@@ -332,7 +332,7 @@ A supplementary post-hoc exploration (notebook 03) investigated whether the
 metformin-associated metabolic gradient observed within Cluster 0 ("Mild, lower
 treatment intensity") represented a discrete sub-phenotype. Recursive clustering
 (silhouette, K=2-7), Mann-Whitney effect sizes, and visual inspection converged on
-classifying it as a real but continuous gradient, not a discrete sub-cluster — the
+classifying it as a real but continuous gradient, not a discrete sub-cluster, the
 finalized K=3 solution (Section 7) is unaffected.
 
 **Dataset limitation identified**: HbA1c and BMI show sharp, near-categorical
@@ -343,3 +343,131 @@ generation mechanism itself is out of scope. Readers/reviewers of this project
 should be aware that subtype boundaries derived from HbA1c in this synthetic
 dataset may be influenced by this artifact, and that conclusions drawn from HbA1c
 distributional shape (beyond central tendency) warrant caution.
+
+## 8. Phase 4 — Predictive Modeling: Early Subtype Stratification
+
+### 8.1 Objective
+
+Test whether the three Phase 3 subtypes can be predicted from features available at or
+near diagnosis, **before** any treatment decision is made, directly testing the
+"early subtype identification" framing emphasized in RWE/precision-medicine literature and
+job descriptions. Target: `cluster_label` (3 classes, from
+`patient_features_clustered.parquet`), imbalanced 73.9% / 20.8% / 5.3% (Mild / Multimorbid
+/ Dyslipidemic).
+
+### 8.2 Predictor Set: Treatment-Naive Design
+
+| Included (9 features) | Excluded | Rationale |
+|---|---|---|
+| AGE, HbA1c, Glucose, BMI, LDL, HDL, Triglycerides, Creatinine, `creatinine_measured` | CCI, `encounters_per_year` | Accumulate over years of follow-up, not available at a single baseline visit; including them would make Cluster 2 trivially separable and defeat the "early" purpose |
+| | `on_metformin`, `on_insulin`, `on_other_antidiabetic` | Near-deterministically leak the cluster label (Multimorbid = 91% insulin, Dyslipidemic = 98% metformin); deliberately excluded for a treatment-naive use case |
+| | RACE, ETHNICITY, GENDER | Consistent with the equity-driven exclusion already applied to Phase 3 clustering; the Phase 3 equity check found no significant association, so no predictive power is lost |
+
+### 8.3 Train/Test Split and Cross-Validation Strategy
+
+- **Outer split**: 80% train (n=1410) / 20% holdout test (n=353), `stratify=y` to preserve
+  class proportions in both sets. The holdout test set was used exactly once, at the end,
+  for final model evaluation, never for training or model selection.
+- **Inner validation**: `StratifiedKFold(n_splits=5, shuffle=True, random_state=42)` on the
+  training set, used for model comparison and selection. Stratification was necessary given
+  the small minority class (Dyslipidemic, n≈94 total, ≈19 per fold), unstratified folds
+  risked unstable per-fold class proportions.
+- **Scaling**: `RobustScaler`, wrapped in a `Pipeline` with the logistic regression model so
+  it is refit independently within each CV fold (avoiding leakage of fold-test statistics
+  into training). Not applied for the two tree-based models (Random Forest,
+  HistGradientBoosting), since split-based models are scale-invariant.
+- **Primary metric**: macro-F1 (unweighted average of per-class F1), chosen over accuracy
+  given the class imbalance, a majority-class-only classifier would reach ~74% accuracy
+  while being clinically useless for the two minority subtypes.
+
+### 8.4 Candidate Models and Cross-Validation Results
+
+All three models used `class_weight="balanced"` to counteract class imbalance during
+training.
+
+| Model | Macro-F1 (mean ± SD) | Accuracy (mean ± SD) |
+|---|---|---|
+| Logistic Regression (`max_iter=1000`) | 0.877 ± 0.023 | 0.873 ± 0.020 |
+| Random Forest (`n_estimators=300`) | 0.881 ± 0.022 | 0.894 ± 0.019 |
+| HistGradientBoosting | 0.898 ± 0.020 | 0.907 ± 0.016 |
+
+**Per-class out-of-fold breakdown** (precision / recall / F1):
+
+| Class | Logistic Regression | Random Forest | HistGradientBoosting |
+|---|---|---|---|
+| Dyslipidemic / metabolic | 0.94 / 1.00 / 0.97 | 0.90 / 0.96 / 0.93 | 0.96 / 0.99 / 0.97 |
+| Mild, lower treatment intensity | 0.98 / 0.85 / 0.91 | 0.97 / 0.89 / 0.93 | 0.94 / 0.93 / 0.94 |
+| Multimorbid, high care complexity | 0.64 / 0.92 / 0.75 | 0.69 / 0.90 / 0.78 | 0.77 / 0.80 / 0.78 |
+
+**Feature importance** (fit on full train set, post-CV): logistic regression coefficients
+and Random Forest importance converge on the same top features (`Triglycerides`, `Glucose`/
+`Creatinine`, `HbA1c`), supporting genuine signal rather than an algorithm-specific
+artifact. Logistic regression coefficients are also clinically interpretable: Dyslipidemic
+is driven by `Triglycerides` (+2.33) and low `HDL` (-0.97); Multimorbid by `HbA1c` (-1.87)
+together with `Creatinine` (+1.08) and `creatinine_measured` (+0.99), the model
+independently recovered the Phase 2 missing-not-at-random creatinine signal.
+
+**Caveat**: `HbA1c` ranks among the top 2-3 features in both models, despite the
+Synthea-generated banding artifact documented in notebook 03 (Section 7 appendix). `BMI`,
+the other flagged variable, shows minimal importance in both models, the exposure is
+contained to one feature, but remains a documented limitation of the final model's signal.
+
+### 8.5 Model Selection: Deviation from Macro-F1-Only Selection
+
+**Decision**: HistGradientBoosting had the highest macro-F1 (0.898) but was **not**
+selected. Clinical reasoning was applied instead: a Multimorbid patient (Phase 3 profile,
+CCI 4.34, 6.35 encounters/year, 91% on insulin) carries materially higher clinical risk if
+missed at baseline than a Dyslipidemic patient. **Multimorbid recall was therefore adopted
+as the deciding metric**, not aggregate macro-F1.
+
+| Model | Multimorbid recall |
+|---|---|
+| Logistic Regression | **0.92** |
+| Random Forest | 0.90 |
+| HistGradientBoosting | 0.80 |
+
+HistGradientBoosting's higher aggregate score came from improved Multimorbid *precision*
+(fewer false alarms), not recall, it missed 20% of true Multimorbid patients
+(out-of-fold), the opposite direction of the established clinical priority, and was ruled
+out on that basis despite the strongest aggregate metric.
+
+**Final model: Logistic Regression**, best Multimorbid recall (0.92), perfect Dyslipidemic
+recall (1.00), and the most interpretable of the three candidates (a relevant secondary
+benefit for reporting and stakeholder communication). Accepted trade-off: the highest
+Mild→Multimorbid confusion of the three models (15%), over-triage of a mild patient, the
+lower-risk direction of error compared to under-triage of a complex one.
+
+### 8.6 Final Holdout Test Performance (n=353, evaluated once)
+
+| Class | Precision | Recall | F1 | Support |
+|---|---|---|---|---|
+| Dyslipidemic / metabolic | 0.90 | 1.00 | 0.95 | 19 |
+| Mild, lower treatment intensity | 0.98 | 0.84 | 0.90 | 261 |
+| Multimorbid, high care complexity | 0.61 | 0.92 | 0.74 | 73 |
+| **Macro avg** | 0.83 | **0.92** | 0.86 | 353 |
+
+Holdout results closely match the cross-validation estimates (macro-F1 0.86 vs. 0.877 ± 0.023;
+Multimorbid recall 0.92, identical to the CV estimate), confirming the model-selection
+decision generalizes to unseen patients rather than reflecting an artifact of the CV
+process itself.
+
+**Answer to the Phase 4 research question**: yes, baseline treatment-naive features
+meaningfully stratify patients into the three Phase 3 subtypes, even excluding the most
+discriminative variables (CCI, `encounters_per_year`) by design. Performance is strongest
+for Dyslipidemic (defined almost entirely by the baseline lipid panel) and good, though
+imperfect, for the Mild/Multimorbid boundary, matching the moderate-performance
+expectation set at the start of Phase 4 scoping rather than an engineered-away result.
+
+### 8.7 Limitations and Future Work
+
+- Dyslipidemic test support is small (n=19); the precision estimate (0.90) carries wider
+  sampling uncertainty than the other two classes despite a strong point estimate.
+- Multimorbid precision (0.61) is the weakest spot: roughly 4 in 10 patients flagged as
+  Multimorbid are false alarms, an accepted trade-off given the priority on Multimorbid
+  recall.
+- Part of the model's signal rests on `HbA1c`, a variable with a documented synthetic-data
+  banding artifact (notebook 03).
+- Future work: a continuous treatment-adherence score (flagged in notebook 03) as an
+  additional baseline feature; a probability-threshold adjustment (instead of the default
+  0.5 cutoff) to push Multimorbid recall further, trading deeper into Mild/Multimorbid
+  confusion if clinically justified.
