@@ -1,6 +1,6 @@
 # Analysis Protocol — Patient Subtyping in a Type 2 Diabetes Cohort (Synthea)
 
-## Status: Phase 3 complete (clustering) — ready for Phase 4 (interpretation / reporting)
+## Status: Phases 0–4 complete + exploratory extension (notebook 05) — ready for reporting
 
 ---
 
@@ -471,3 +471,110 @@ expectation set at the start of Phase 4 scoping rather than an engineered-away r
   additional baseline feature; a probability-threshold adjustment (instead of the default
   0.5 cutoff) to push Multimorbid recall further, trading deeper into Mild/Multimorbid
   confusion if clinically justified.
+
+---
+
+## 9. Exploratory Extension — Treatment Adherence/Intensity Score (Notebook 05)
+
+### 9.1 Motivation
+
+Section 7.6 noted a metformin-associated metabolic gradient within Cluster 0 as a
+candidate direction for future work. Notebook 03 (Section 7 appendix) classified this
+gradient as continuous rather than a discrete sub-phenotype. This notebook constructs
+a quantitative, continuous treatment intensity score to characterize that gradient
+across all three Phase 3 subtypes and test whether it aligns with the clinical
+profiles established in Phase 3.
+
+This analysis is explicitly **exploratory and descriptive**, it does not modify the
+Phase 3 clustering solution (K=3 stands) or the Phase 4 predictive model (treatment-
+naive design preserved). The score is a candidate feature for a future treatment-aware
+model variant only, not an input to the current pipeline.
+
+### 9.2 Score Definition
+
+**Treatment intensity score**: total antidiabetic drug days, computed as the sum of
+per-prescription durations (`STOP − START`) across all recorded antidiabetic
+prescriptions for each patient, aggregated by drug class (metformin, insulin,
+other_antidiabetic) and then summed into a single `treatment_days_total` score.
+
+Drug codes used (exact codes from Phase 2 notebook 01, for consistency):
+
+| Code | Description | Drug class |
+|---|---|---|
+| 860975 | Metformin hydrochloride 500 MG ER | metformin |
+| 106892 | Insulin isophane/regular 70/30 (Humulin) | insulin |
+| 311034 | Insulin regular 100 UNT/ML | insulin |
+| 865098 | Insulin Lispro 100 UNT/ML (Humalog) | insulin |
+| 897122 | Liraglutide 6 MG/ML Pen Injector | other_antidiabetic |
+| 1373463 | Canagliflozin 100 MG Oral Tablet | other_antidiabetic |
+
+**Extraction**: chunked read of `medications.csv` (307 MB) with simultaneous filter on
+`PATIENT` (cohort set, O(1) lookup) and `CODE`, same pattern established in Phase 2
+for `observations.csv`.
+
+**Open-ended prescriptions**: rows with `STOP = NaN` (ongoing at simulation end)
+imputed with the latest `START` date in the extracted dataset as a proxy for the
+Synthea simulation end date (2026-06-15). Conservative choice: does not inflate
+duration beyond what is observed.
+
+### 9.3 Management Modality: Pharmacological vs. Non-Pharmacological
+
+569 of 1763 patients (32.3%) have `treatment_days_total = 0`, no antidiabetic
+medication recorded. These patients are interpreted as managed through non-
+pharmacological means (diet, lifestyle modification), a clinically valid first-line
+strategy, not a missing-data artifact. Including them in a treatment intensity
+analysis would conflate management modality with adherence.
+
+**Decision**: patients with `treatment_days_total = 0` are characterized separately
+and excluded from all intensity analyses. The analytical dataset is restricted to
+1194 pharmacologically managed patients.
+
+Pharmacological management rate by cluster:
+
+| Cluster | Pharmacological (%) | n |
+|---|---|---|
+| Multimorbid, high care complexity | 98.6% | 361/366 |
+| Dyslipidemic / metabolic | 97.9% | 92/94 |
+| Mild, lower treatment intensity | 56.9% | 741/1303 |
+
+The sharp difference in Mild (56.9% vs. ~98% in the other two clusters) is clinically
+coherent: Mild patients have the lowest disease burden (CCI 1.77) and glycemic values
+closest to target (HbA1c 6.09), making non-pharmacological management a plausible
+and appropriate first-line choice for a large fraction of this subgroup.
+
+### 9.4 Statistical Results (pharmacologically managed patients, n=1194)
+
+Kruskal-Wallis: H=170.7, p=8.77e-38. Pairwise Mann-Whitney U (two-sided):
+
+| Comparison | U | p-value | Effect size r | Interpretation |
+|---|---|---|---|---|
+| Mild vs Multimorbid | 68,643 | 2.21e-39 | 0.396 | Medium — meaningful separation |
+| Mild vs Dyslipidemic | 32,579 | 4.89e-01 | 0.024 | Negligible — no practical difference |
+| Dyslipidemic vs Multimorbid | 10,450 | 3.99e-08 | 0.258 | Small-medium |
+
+**Key finding**: among pharmacologically managed patients, **Mild and Dyslipidemic are
+statistically indistinguishable in treatment intensity** (p=0.49, r=0.024, medians
+3708 vs 3751 days). The defining difference between these clusters is metabolic profile
+(lipid panel), not treatment duration or persistence. The only clinically meaningful
+separation is between Multimorbid and both other clusters (median 6729 days, nearly
+double), consistent with higher disease burden and near-universal insulin use.
+
+**Methodological note**: effect sizes are materially smaller than those estimated on
+the full cohort including untreated patients (Mild vs Multimorbid r dropped from 0.505
+to 0.396 after exclusion). A substantial part of the apparent separation in the full
+dataset was driven by the 43% of Mild patients with zero treatment days, a management
+modality difference, not a treatment intensity difference.
+
+### 9.5 Limitations
+
+- `treatment_days_total` conflates treatment duration with disease history length:
+  patients diagnosed earlier accumulate more days regardless of adherence. Normalizing
+  by time since diagnosis would be more precise but was not available as a clean
+  variable in the Synthea output.
+- One extreme outlier (~46,000 days, ~127 years) is almost certainly a Synthea
+  data-generation artifact (open-ended prescription with an early START date). Retained
+  in the dataset but noted as a known limitation; robust statistics (median, IQR,
+  Mann-Whitney) are unaffected.
+- The score was deliberately excluded from the Phase 4 predictive model (treatment-
+  naive design). It remains a candidate feature for a future treatment-aware model
+  variant if that design constraint is relaxed.
