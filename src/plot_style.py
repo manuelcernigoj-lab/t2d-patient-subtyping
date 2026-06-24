@@ -24,7 +24,7 @@ def set_project_style():
     sns.set_style('ticks')
     plt.rcParams.update({
         "figure.figsize": (8, 5),
-        "figure.facecolor": COLOR_BG,
+        "figure.facecolor": "white",
         "axes.facecolor": COLOR_BG,
         "font.family": "sans-serif",
         "font.size": 11,
